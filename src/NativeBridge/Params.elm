@@ -1,52 +1,61 @@
 module NativeBridge.Params exposing (..)
 
 
-type FixedParam
-    = FixedBool Bool
+import NativeBridge.Fields exposing (FieldType)
+
+
+type Param
+    = Dynamic FieldType
+    | FixedBool Bool
     | FixedInt Int
     | FixedFloat Float
     | FixedString String
-    | FixedList (List FixedParam)
-    | FixedObject (List ( String, FixedParam ))
+    | FixedList (List Param)
+    | FixedObject (List ( String, Param ))
     | FixedNull
     | FixedUndefined
 
 
-fixedBool : Bool -> FixedParam
+param : FieldType -> Param
+param t =
+    Dynamic t
+
+
+fixedBool : Bool -> Param
 fixedBool b =
     FixedBool b
 
 
-fixedInt : Int -> FixedParam
+fixedInt : Int -> Param
 fixedInt i =
     FixedInt i
 
 
-fixedFloat : Float -> FixedParam
+fixedFloat : Float -> Param
 fixedFloat f =
     FixedFloat f
 
 
-fixedString : String -> FixedParam
+fixedString : String -> Param
 fixedString s =
     FixedString s
 
 
-fixedList : List FixedParam -> FixedParam
+fixedList : List Param -> Param
 fixedList list =
     FixedList list
 
 
-fixedObject : List ( String, FixedParam ) -> FixedParam
+fixedObject : List ( String, Param ) -> Param
 fixedObject fields =
     FixedObject fields
 
 
-fixedNull : FixedParam
+fixedNull : Param
 fixedNull =
     FixedNull
 
 
-fixedUndefined : FixedParam
+fixedUndefined : Param
 fixedUndefined =
     FixedUndefined

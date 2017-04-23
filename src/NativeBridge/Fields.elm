@@ -9,6 +9,7 @@ type FieldType
     | ListField FieldType
     | MaybeField FieldType
     | DictField FieldType
+    | GeneratedField String
 
 
 type alias Field =
@@ -55,3 +56,8 @@ maybe t =
 dict : FieldType -> FieldType
 dict t =
     DictField t
+
+
+generated : String -> FieldType
+generated name =
+    GeneratedField name

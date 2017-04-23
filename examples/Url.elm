@@ -21,7 +21,6 @@ main =
             , field "slashes" bool
             ]
         ]
-        [ function "format" [ "Url", "String" ]
-        , function "parse" [ "String", "Url" ]
-            |> appendParams [ fixedBool True ]
+        [ function "format" [ param (generated "Url") ] string
+        , function "parse" [ param string, fixedBool True ] (generated "Url")
         ]

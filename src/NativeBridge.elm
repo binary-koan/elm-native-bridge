@@ -55,16 +55,6 @@ unionType name options =
 -- Working with functions
 
 
-function : String -> List String -> BridgeFunction
-function name definition =
-    { name = name, elmName = name, definition = definition, prependParams = [], appendParams = [] }
-
-
-prependParams : List FixedParam -> BridgeFunction -> BridgeFunction
-prependParams params fn =
-    { fn | prependParams = params ++ fn.prependParams }
-
-
-appendParams : List FixedParam -> BridgeFunction -> BridgeFunction
-appendParams params fn =
-    { fn | appendParams = fn.appendParams ++ params }
+function : String -> List Param -> FieldType -> BridgeFunction
+function name params result =
+    { name = name, elmName = name, params = params, result = result }

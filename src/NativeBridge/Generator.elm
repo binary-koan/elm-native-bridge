@@ -19,9 +19,8 @@ type BridgeType
 type alias BridgeFunction =
     { name : String
     , elmName : String
-    , definition : List String
-    , prependParams : List FixedParam
-    , appendParams : List FixedParam
+    , params : List Param
+    , result : FieldType
     }
 
 
@@ -117,6 +116,9 @@ generateElmFields fields =
 
                 DictField t ->
                     "Dict String (" ++ formatType t ++ ")"
+
+                GeneratedField name ->
+                    name
 
         formatField field =
             field.name ++ " : " ++ formatType field.fieldType
