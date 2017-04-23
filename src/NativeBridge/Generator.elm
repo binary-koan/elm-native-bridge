@@ -94,32 +94,6 @@ generateElmTypes types =
 generateElmFields : List Field -> String
 generateElmFields fields =
     let
-        formatType fieldType =
-            case fieldType of
-                BoolField ->
-                    "Bool"
-
-                IntField ->
-                    "Int"
-
-                FloatField ->
-                    "Float"
-
-                StringField ->
-                    "String"
-
-                ListField t ->
-                    "List (" ++ formatType t ++ ")"
-
-                MaybeField t ->
-                    "Maybe (" ++ formatType t ++ ")"
-
-                DictField t ->
-                    "Dict String (" ++ formatType t ++ ")"
-
-                GeneratedField name ->
-                    name
-
         formatField field =
             field.name ++ " : " ++ formatType field.fieldType
 
@@ -189,16 +163,28 @@ jsTypeConverter direction name fields =
 
 generateFunctionDefinitions : List BridgeFunction -> GeneratedFiles -> Task String GeneratedFiles
 generateFunctionDefinitions functions files =
-    succeed { files | elmFile = files.elmFile ++ generateElmFunctions functions }
+    succeed { files | elmFile = files.elmFile ++ "\n" ++ generateElmFunctions functions }
 
 
 generateElmFunctions : List BridgeFunction -> String
 generateElmFunctions functions =
     let
+        formatParam param =
+            case param of
+                Dynamic t ->
+                    Just (formatType t)
+
+                _ ->
+                    Nothing
+
+        formatParams function =
+            List.filterMap formatParam function.params
+                |> String.join " -> "
+
         generateFunction function =
-            "function"
+            function.elmName ++ " : " ++ (formatParams function) ++ " -> " ++ (formatType function.result)
     in
-        List.map generateFunction functions |> String.join "\n"
+        List.map generateFunction functions |> String.join "\n\n"
 
 
 
@@ -235,6 +221,34 @@ detectFeatures types =
                     features
     in
         List.foldr featuresForField { listTypes = False, maybeTypes = False, dictTypes = False } allFields
+
+
+formatType : FieldType -> String
+formatType fieldType =
+    case fieldType of
+        BoolField ->
+            "Bool"
+
+        IntField ->
+            "Int"
+
+        FloatField ->
+            "Float"
+
+        StringField ->
+            "String"
+
+        ListField t ->
+            "List (" ++ formatType t ++ ")"
+
+        MaybeField t ->
+            "Maybe (" ++ formatType t ++ ")"
+
+        DictField t ->
+            "Dict String (" ++ formatType t ++ ")"
+
+        GeneratedField name ->
+            name
 
 
 converterName : String -> String -> String
