@@ -1,6 +1,6 @@
 module NativeBridge.Generator exposing (..)
 
-import Task exposing (Task)
+import Task exposing (..)
 import NativeBridge.Fields exposing (..)
 import NativeBridge.Params exposing (..)
 
@@ -28,19 +28,31 @@ type alias BridgeFunction =
 type alias GeneratedFiles =
     { elmFile : String
     , jsFile : String
+    , features : Features
+    }
+
+
+type alias Features =
+    { maybeTypes : Bool
+    , listTypes : Bool
+    , dictTypes : Bool
     }
 
 
 generateFiles : String -> String -> List BridgeType -> List BridgeFunction -> Task String GeneratedFiles
 generateFiles moduleName subject types functions =
-    Task.succeed
-        { elmFile = wrapElmModule moduleName (generateElmTypes types)
-        , jsFile = wrapJsModule moduleName (jsPreamble ++ "\n\n" ++ generateJsTypes types)
-        }
+    generateTypeDefinitions types
+        |> andThen (generateFunctionDefinitions functions)
+        |> andThen (addWrappers moduleName subject)
 
 
 
 -- Basics
+
+
+addWrappers : String -> String -> GeneratedFiles -> Task String GeneratedFiles
+addWrappers moduleName subject files =
+    succeed { files | elmFile = wrapElmModule moduleName files.elmFile, jsFile = wrapJsModule moduleName files.jsFile }
 
 
 wrapElmModule : String -> String -> String
@@ -55,6 +67,11 @@ wrapJsModule moduleName content =
 
 
 -- Types
+
+
+generateTypeDefinitions : List BridgeType -> Task String GeneratedFiles
+generateTypeDefinitions types =
+    succeed { elmFile = generateElmTypes types, jsFile = generateJsTypes types, features = detectFeatures types }
 
 
 generateElmTypes : List BridgeType -> String
@@ -165,7 +182,57 @@ jsTypeConverter direction name fields =
 
 
 
+-- Functions
+
+
+generateFunctionDefinitions : List BridgeFunction -> GeneratedFiles -> Task String GeneratedFiles
+generateFunctionDefinitions functions files =
+    succeed { files | elmFile = files.elmFile ++ generateElmFunctions functions }
+
+
+generateElmFunctions : List BridgeFunction -> String
+generateElmFunctions functions =
+    let
+        generateFunction function =
+            "function"
+    in
+        List.map generateFunction functions |> String.join "\n"
+
+
+
 -- Utilities
+
+
+detectFeatures : List BridgeType -> Features
+detectFeatures types =
+    let
+        fieldsFor t =
+            case t of
+                RecordType record ->
+                    record.fields
+
+                UnionType union ->
+                    --TODO
+                    []
+
+        allFields =
+            List.concatMap fieldsFor types
+
+        featuresForField field features =
+            case field.fieldType of
+                ListField t ->
+                    { features | listTypes = True }
+
+                MaybeField t ->
+                    { features | maybeTypes = True }
+
+                DictField t ->
+                    { features | dictTypes = True }
+
+                _ ->
+                    features
+    in
+        List.foldr featuresForField { listTypes = False, maybeTypes = False, dictTypes = False } allFields
 
 
 converterName : String -> String -> String
