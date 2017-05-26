@@ -1,6 +1,5 @@
 module NativeBridge.Params exposing (..)
 
-
 import NativeBridge.Fields exposing (FieldType)
 
 

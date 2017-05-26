@@ -68,7 +68,7 @@ wrapElmModule moduleName content =
 
 wrapJsModule : String -> String -> String
 wrapJsModule moduleName content =
-    "var " ++ repoName ++ "$" ++ (toJsId moduleName) ++ " = function() {\n" ++ (indent content) ++ "\n}()\n"
+    "var " ++ repoName ++ "$" ++ (toJsId moduleName) ++ " = function() {\n  var typeConverters = {}, functions = {}\n\n" ++ (indent content) ++ "\n\n  return functions\n}()\n"
 
 
 
@@ -155,7 +155,7 @@ elmToJsRecordConverter name fields =
             else
                 "var jsValue = Object.assign({}, original)\n" ++ fieldConverters ++ "\nreturn jsValue"
     in
-        "typeConverters.elmToJs" ++ name ++ " = function(original) {\n" ++ (indent body) ++ "\n}"
+        "typeConverters.elmToJs" ++ name ++ " = original => {\n" ++ (indent body) ++ "\n}"
 
 
 jsToElmRecordConverter : String -> List Field -> String
@@ -182,7 +182,7 @@ jsToElmRecordConverter name fields =
             else
                 "var elmValue = Object.assign({}, original)\n" ++ fieldConverters ++ "\nreturn elmValue"
     in
-        "typeConverters.jsToElm" ++ name ++ " = function(original) {\n" ++ (indent body) ++ "\n}"
+        "typeConverters.jsToElm" ++ name ++ " = original => {\n" ++ (indent body) ++ "\n}"
 
 
 
@@ -225,7 +225,58 @@ generateElmFunction function =
 
 generateJsFunction : FunctionOptions -> String
 generateJsFunction function =
-    ""
+    let
+        param p =
+            case p of
+                Dynamic fieldType ->
+                    elmParam fieldType
+
+                FixedBool b ->
+                    if b == True then
+                        "true"
+                    else
+                        "false"
+
+                FixedInt i ->
+                    toString i
+
+                FixedFloat f ->
+                    toString f
+
+                FixedString s ->
+                    "\"" ++ (s |> String.split "\"" |> String.join "\\\"") ++ "\""
+
+                FixedList l ->
+                    "[" ++ String.join ", " (List.map param l) ++ "]"
+
+                FixedObject o ->
+                    "{" ++ String.join ", " (List.map (\( k, v ) -> k ++ ": " ++ param v) o) ++ "}"
+
+                FixedNull ->
+                    "null"
+
+                FixedUndefined ->
+                    "undefined"
+
+        elmParam fieldType =
+            if String.isEmpty (elmToJsConverter fieldType) then
+                "args.shift()"
+            else
+                "(value => " ++ elmToJsConverter fieldType ++ ")(args.shift())"
+
+        params =
+            List.map param function.params
+    in
+        "functions."
+            ++ function.name
+            ++ " = (...args) => {\n"
+            ++ "  var value = context."
+            ++ function.name
+            ++ "(\n"
+            ++ indent (String.join "\n" params)
+            ++ "\n  )\n  return "
+            ++ valueToElm function.result
+            ++ "\n}"
 
 
 detectFeatures : List BridgeEntity -> Features
@@ -309,7 +360,7 @@ toJsId id =
 
 indent : String -> String
 indent lines =
-    "    " ++ (String.split "\n" lines |> String.join "\n    ")
+    "  " ++ (String.split "\n" lines |> String.join "\n  ")
 
 
 jsPreamble : String

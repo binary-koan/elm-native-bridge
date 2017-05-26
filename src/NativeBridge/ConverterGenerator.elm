@@ -19,6 +19,9 @@ jsToElmConverter fieldType =
                 ++ ")(dict))\n"
                 ++ "  return dict\n})()"
 
+        GeneratedField name ->
+            "jsToElm" ++ name ++ "(value)"
+
         _ ->
             ""
 
@@ -38,6 +41,9 @@ elmToJsConverter fieldType =
                 ++ valueToJs t
                 ++ "\n  return obj\n"
                 ++ "}, {}, value)"
+
+        GeneratedField name ->
+            "elmToJs" ++ name ++ "(value)"
 
         _ ->
             ""
