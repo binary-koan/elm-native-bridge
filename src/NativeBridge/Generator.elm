@@ -49,7 +49,7 @@ type alias Features =
 
 generateFiles : String -> String -> List BridgeEntity -> Task String GeneratedFiles
 generateFiles moduleName subject types =
-    generateEntities types
+    generateEntities moduleName types
         |> andThen (addWrappers moduleName subject)
 
 
@@ -91,17 +91,17 @@ var {0}${1} = (() => {
 -- Types
 
 
-generateEntities : List BridgeEntity -> Task String GeneratedFiles
-generateEntities entities =
+generateEntities : String -> List BridgeEntity -> Task String GeneratedFiles
+generateEntities moduleName entities =
     succeed
-        { elmFile = String.join "\n\n" (List.map generateElmEntity entities)
+        { elmFile = String.join "\n\n" (List.map (generateElmEntity moduleName) entities)
         , jsFile = String.join "" (List.map generateJsEntity entities)
         , features = detectFeatures entities
         }
 
 
-generateElmEntity : BridgeEntity -> String
-generateElmEntity entity =
+generateElmEntity : String -> BridgeEntity -> String
+generateElmEntity moduleName entity =
     case entity of
         Record record ->
             generateElmRecord record
@@ -110,7 +110,7 @@ generateElmEntity entity =
             generateElmUnion union
 
         Function function ->
-            generateElmFunction function
+            generateElmFunction moduleName function
 
 
 generateJsEntity : BridgeEntity -> String
@@ -209,8 +209,8 @@ generateJsUnion union =
 -- Functions
 
 
-generateElmFunction : FunctionOptions -> String
-generateElmFunction function =
+generateElmFunction : String -> FunctionOptions -> String
+generateElmFunction moduleName function =
     let
         formatParam param =
             case param of
@@ -220,11 +220,23 @@ generateElmFunction function =
                 _ ->
                     Nothing
 
-        formatParams function =
+        formatParams =
             List.filterMap formatParam function.params
                 |> String.join " -> "
+
+        paramNames =
+            List.range 1 (List.length function.params)
+                |> List.map (\i -> "p" ++ toString i)
+                |> String.join " "
     in
-        function.elmName ++ " : " ++ (formatParams function) ++ " -> " ++ (formatType function.result)
+        interpolate "{0} : {1} -> {2}\n{0} {3} = Native.{4}.{5} {3}"
+            [ function.elmName
+            , formatParams
+            , formatType function.result
+            , paramNames
+            , moduleName
+            , function.name
+            ]
 
 
 generateJsFunction : FunctionOptions -> String
