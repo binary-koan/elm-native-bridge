@@ -10,14 +10,14 @@ type alias BridgeGenerator =
     Program Never () ()
 
 
-generate : String -> String -> List BridgeType -> List BridgeFunction -> BridgeGenerator
-generate moduleName subject types functions =
+generate : String -> String -> List BridgeEntity -> BridgeGenerator
+generate moduleName subject types =
     Platform.program
         { init =
             ( ()
             , Task.perform
                 (\_ -> ())
-                (generateFiles moduleName subject types functions
+                (generateFiles moduleName subject types
                     |> Task.andThen writeFiles
                     |> Task.onError logError
                 )
@@ -41,20 +41,20 @@ writeFiles files =
 -- Working with types
 
 
-recordType : String -> List Field -> BridgeType
-recordType name fields =
-    RecordType { name = name, fields = fields }
+record : String -> List Field -> BridgeEntity
+record name fields =
+    Record { name = name, fields = fields }
 
 
-unionType : String -> List ( String, BridgeType ) -> BridgeType
-unionType name options =
-    UnionType { name = name, options = options }
+union : String -> List ( String, BridgeEntity ) -> BridgeEntity
+union name options =
+    Union { name = name, options = options }
 
 
 
 -- Working with functions
 
 
-function : String -> List Param -> FieldType -> BridgeFunction
+function : String -> List Param -> FieldType -> BridgeEntity
 function name params result =
-    { name = name, elmName = name, params = params, result = result }
+    Function { name = name, elmName = name, params = params, result = result }

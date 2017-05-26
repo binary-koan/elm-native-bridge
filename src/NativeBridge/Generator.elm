@@ -5,18 +5,19 @@ import NativeBridge.Fields exposing (..)
 import NativeBridge.Params exposing (..)
 
 
-type BridgeType
-    = RecordType
+type BridgeEntity
+    = Record
         { name : String
         , fields : List Field
         }
-    | UnionType
+    | Union
         { name : String
-        , options : List ( String, BridgeType )
+        , options : List ( String, BridgeEntity )
         }
+    | Function FunctionOptions
 
 
-type alias BridgeFunction =
+type alias FunctionOptions =
     { name : String
     , elmName : String
     , params : List Param
@@ -38,10 +39,9 @@ type alias Features =
     }
 
 
-generateFiles : String -> String -> List BridgeType -> List BridgeFunction -> Task String GeneratedFiles
-generateFiles moduleName subject types functions =
+generateFiles : String -> String -> List BridgeEntity -> Task String GeneratedFiles
+generateFiles moduleName subject types =
     generateTypeDefinitions types
-        |> andThen (generateFunctionDefinitions functions)
         |> andThen (addWrappers moduleName subject)
 
 
@@ -68,25 +68,28 @@ wrapJsModule moduleName content =
 -- Types
 
 
-generateTypeDefinitions : List BridgeType -> Task String GeneratedFiles
+generateTypeDefinitions : List BridgeEntity -> Task String GeneratedFiles
 generateTypeDefinitions types =
     succeed { elmFile = generateElmTypes types, jsFile = generateJsTypes types, features = detectFeatures types }
 
 
-generateElmTypes : List BridgeType -> String
+generateElmTypes : List BridgeEntity -> String
 generateElmTypes types =
     let
-        generateRecordType record =
+        generateRecord record =
             "type alias " ++ record.name ++ " =\n" ++ (indent (generateElmFields record.fields))
 
         generateElmType t =
             case t of
-                RecordType record ->
-                    generateRecordType record
+                Record record ->
+                    generateRecord record
 
-                UnionType union ->
+                Union union ->
                     --TODO
                     ""
+
+                Function func ->
+                    generateElmFunction func
     in
         (List.map generateElmType types |> String.join "\n") ++ "\n"
 
@@ -104,20 +107,23 @@ generateElmFields fields =
         "{ " ++ joinedFields ++ "\n}"
 
 
-generateJsTypes : List BridgeType -> String
+generateJsTypes : List BridgeEntity -> String
 generateJsTypes types =
     let
-        generateRecordType record =
+        generateRecord record =
             (jsTypeConverter "from" record.name record.fields) ++ "\n" ++ (jsTypeConverter "to" record.name record.fields)
 
         generateType t =
             case t of
-                RecordType record ->
-                    generateRecordType record
+                Record record ->
+                    generateRecord record
 
-                UnionType union ->
+                Union union ->
                     -- TODO
                     ""
+
+                Function function ->
+                    generateJsFunction function
     in
         String.join "\n" (List.map generateType types)
 
@@ -161,13 +167,8 @@ jsTypeConverter direction name fields =
 -- Functions
 
 
-generateFunctionDefinitions : List BridgeFunction -> GeneratedFiles -> Task String GeneratedFiles
-generateFunctionDefinitions functions files =
-    succeed { files | elmFile = files.elmFile ++ "\n" ++ generateElmFunctions functions }
-
-
-generateElmFunctions : List BridgeFunction -> String
-generateElmFunctions functions =
+generateElmFunction : FunctionOptions -> String
+generateElmFunction function =
     let
         formatParam param =
             case param of
@@ -180,27 +181,32 @@ generateElmFunctions functions =
         formatParams function =
             List.filterMap formatParam function.params
                 |> String.join " -> "
-
-        generateFunction function =
-            function.elmName ++ " : " ++ (formatParams function) ++ " -> " ++ (formatType function.result)
     in
-        List.map generateFunction functions |> String.join "\n\n"
+        function.elmName ++ " : " ++ (formatParams function) ++ " -> " ++ (formatType function.result)
+
+
+generateJsFunction : FunctionOptions -> String
+generateJsFunction function =
+    ""
 
 
 
 -- Utilities
 
 
-detectFeatures : List BridgeType -> Features
+detectFeatures : List BridgeEntity -> Features
 detectFeatures types =
     let
         fieldsFor t =
             case t of
-                RecordType record ->
+                Record record ->
                     record.fields
 
-                UnionType union ->
+                Union union ->
                     --TODO
+                    []
+
+                Function function ->
                     []
 
         allFields =

@@ -1,3 +1,5 @@
+module Main exposing (..)
+
 import NativeBridge exposing (..)
 import NativeBridge.Fields exposing (..)
 import NativeBridge.Params exposing (..)
@@ -5,8 +7,9 @@ import NativeBridge.Params exposing (..)
 
 main : BridgeGenerator
 main =
-    generate "Url" "require('url')"
-        [ recordType "Url"
+    generate "Url"
+        "require('url')"
+        [ record "Url"
             [ field "auth" (maybe string)
             , field "hash" (maybe string)
             , field "host" (maybe string)
@@ -20,7 +23,6 @@ main =
             , field "search" (maybe string)
             , field "slashes" bool
             ]
-        ]
-        [ function "format" [ param (generated "Url") ] string
+        , function "format" [ param (generated "Url") ] string
         , function "parse" [ param string, fixedBool True ] (generated "Url")
         ]
