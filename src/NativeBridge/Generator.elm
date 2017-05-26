@@ -6,15 +6,21 @@ import NativeBridge.Params exposing (..)
 
 
 type BridgeEntity
-    = Record
-        { name : String
-        , fields : List Field
-        }
-    | Union
-        { name : String
-        , options : List ( String, BridgeEntity )
-        }
+    = Record RecordOptions
+    | Union UnionOptions
     | Function FunctionOptions
+
+
+type alias RecordOptions =
+    { name : String
+    , fields : List Field
+    }
+
+
+type alias UnionOptions =
+    { name : String
+    , options : List ( String, BridgeEntity )
+    }
 
 
 type alias FunctionOptions =
@@ -41,7 +47,7 @@ type alias Features =
 
 generateFiles : String -> String -> List BridgeEntity -> Task String GeneratedFiles
 generateFiles moduleName subject types =
-    generateTypeDefinitions types
+    generateEntities types
         |> andThen (addWrappers moduleName subject)
 
 
@@ -68,64 +74,107 @@ wrapJsModule moduleName content =
 -- Types
 
 
-generateTypeDefinitions : List BridgeEntity -> Task String GeneratedFiles
-generateTypeDefinitions types =
-    succeed { elmFile = generateElmTypes types, jsFile = generateJsTypes types, features = detectFeatures types }
+generateEntities : List BridgeEntity -> Task String GeneratedFiles
+generateEntities entities =
+    succeed
+        { elmFile = String.join "\n" (List.map generateElmEntity entities)
+        , jsFile = String.join "\n" (List.map generateJsEntity entities)
+        , features = detectFeatures entities
+        }
 
 
-generateElmTypes : List BridgeEntity -> String
-generateElmTypes types =
-    let
-        generateRecord record =
-            "type alias " ++ record.name ++ " =\n" ++ (indent (generateElmFields record.fields))
+generateElmEntity : BridgeEntity -> String
+generateElmEntity entity =
+    case entity of
+        Record record ->
+            generateElmRecord record
 
-        generateElmType t =
-            case t of
-                Record record ->
-                    generateRecord record
+        Union union ->
+            generateElmUnion union
 
-                Union union ->
-                    --TODO
-                    ""
-
-                Function func ->
-                    generateElmFunction func
-    in
-        (List.map generateElmType types |> String.join "\n") ++ "\n"
+        Function function ->
+            generateElmFunction function
 
 
-generateElmFields : List Field -> String
-generateElmFields fields =
+generateJsEntity : BridgeEntity -> String
+generateJsEntity entity =
+    case entity of
+        Record record ->
+            generateJsRecord record
+
+        Union union ->
+            generateJsUnion union
+
+        Function function ->
+            generateJsFunction function
+
+
+
+-- Record types
+
+
+generateElmRecord : RecordOptions -> String
+generateElmRecord record =
     let
         formatField field =
             field.name ++ " : " ++ formatType field.fieldType
 
-        joinedFields =
-            List.map formatField fields
-                |> String.join "\n, "
+        formattedFields fields =
+            "{ " ++ String.join "\n, " (List.map formatField fields) ++ "\n}"
     in
-        "{ " ++ joinedFields ++ "\n}"
+        "type alias " ++ record.name ++ " =\n" ++ (indent (formattedFields record.fields))
 
 
-generateJsTypes : List BridgeEntity -> String
-generateJsTypes types =
+generateJsRecord : RecordOptions -> String
+generateJsRecord record =
+    (jsTypeConverter "from" record.name record.fields) ++ "\n" ++ (jsTypeConverter "to" record.name record.fields)
+
+
+
+-- Union types
+
+
+generateElmUnion : UnionOptions -> String
+generateElmUnion union =
+    --TODO
+    ""
+
+
+generateJsUnion : UnionOptions -> String
+generateJsUnion union =
+    -- TODO
+    ""
+
+
+
+-- Functions
+
+
+generateElmFunction : FunctionOptions -> String
+generateElmFunction function =
     let
-        generateRecord record =
-            (jsTypeConverter "from" record.name record.fields) ++ "\n" ++ (jsTypeConverter "to" record.name record.fields)
+        formatParam param =
+            case param of
+                Dynamic t ->
+                    Just (formatType t)
 
-        generateType t =
-            case t of
-                Record record ->
-                    generateRecord record
+                _ ->
+                    Nothing
 
-                Union union ->
-                    -- TODO
-                    ""
-
-                Function function ->
-                    generateJsFunction function
+        formatParams function =
+            List.filterMap formatParam function.params
+                |> String.join " -> "
     in
-        String.join "\n" (List.map generateType types)
+        function.elmName ++ " : " ++ (formatParams function) ++ " -> " ++ (formatType function.result)
+
+
+generateJsFunction : FunctionOptions -> String
+generateJsFunction function =
+    ""
+
+
+
+-- Utilities
 
 
 jsTypeConverter : String -> String -> List Field -> String
@@ -161,37 +210,6 @@ jsTypeConverter direction name fields =
                 "var value = Object.assign({}, original)\n" ++ fieldConverters ++ "\nreturn value"
     in
         "typeConverters." ++ (converterName direction name) ++ " = function(original) {\n" ++ (indent body) ++ "\n}"
-
-
-
--- Functions
-
-
-generateElmFunction : FunctionOptions -> String
-generateElmFunction function =
-    let
-        formatParam param =
-            case param of
-                Dynamic t ->
-                    Just (formatType t)
-
-                _ ->
-                    Nothing
-
-        formatParams function =
-            List.filterMap formatParam function.params
-                |> String.join " -> "
-    in
-        function.elmName ++ " : " ++ (formatParams function) ++ " -> " ++ (formatType function.result)
-
-
-generateJsFunction : FunctionOptions -> String
-generateJsFunction function =
-    ""
-
-
-
--- Utilities
 
 
 detectFeatures : List BridgeEntity -> Features
