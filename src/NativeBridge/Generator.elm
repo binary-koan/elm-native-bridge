@@ -1,6 +1,7 @@
 module NativeBridge.Generator exposing (..)
 
 import Task exposing (..)
+import String.Interpolate exposing (..)
 import NativeBridge.Fields exposing (..)
 import NativeBridge.Params exposing (..)
 import NativeBridge.ConverterGenerator exposing (..)
@@ -58,20 +59,35 @@ generateFiles moduleName subject types =
 
 addWrappers : String -> String -> GeneratedFiles -> Task String GeneratedFiles
 addWrappers moduleName subject files =
-    succeed { files | elmFile = wrapElmModule moduleName files.elmFile, jsFile = wrapJsModule moduleName files.jsFile }
+    succeed { files | elmFile = wrapElmModule moduleName files.elmFile, jsFile = wrapJsModule moduleName subject files.jsFile }
 
 
 wrapElmModule : String -> String -> String
 wrapElmModule moduleName content =
-    "module " ++ moduleName ++ " exposing (..)\n\n" ++ content
+    interpolate """
+module {0} exposing (..)
+
+import Native.{0}
+
+{1}
+""" [ moduleName, content ]
 
 
-wrapJsModule : String -> String -> String
-wrapJsModule moduleName content =
-    "var " ++ repoName ++ "$" ++ (toJsId moduleName) ++ " = function() {\n  var typeConverters = {}, functions = {}\n\n" ++ (indent content) ++ "\n\n  return functions\n}()\n"
+wrapJsModule : String -> String -> String -> String
+wrapJsModule moduleName subject content =
+    interpolate """
+var {0}${1} = (() => {
+  var typeConverters = {}, functions = {}
+  var context = {2}
+
+{3}
+  return functions
+})()
+""" [ repoName, toJsId moduleName, subject, indent content ]
 
 
 
+-- "var " ++ repoName ++ "$" ++ (toJsId moduleName) ++ " = function() {\n  var typeConverters = {}, functions = {}\n\n" ++ (indent content) ++ "\n\n  return functions\n}()\n"
 -- Types
 
 
@@ -79,7 +95,7 @@ generateEntities : List BridgeEntity -> Task String GeneratedFiles
 generateEntities entities =
     succeed
         { elmFile = String.join "\n\n" (List.map generateElmEntity entities)
-        , jsFile = String.join "\n\n" (List.map generateJsEntity entities)
+        , jsFile = String.join "" (List.map generateJsEntity entities)
         , features = detectFeatures entities
         }
 
@@ -138,13 +154,7 @@ elmToJsRecordConverter name fields =
             if String.isEmpty (elmToJsConverter field.fieldType) then
                 ""
             else
-                "value = original."
-                    ++ field.name
-                    ++ "; "
-                    ++ "jsValue."
-                    ++ field.name
-                    ++ " = "
-                    ++ elmToJsConverter field.fieldType
+                interpolate "value = original.{0}; jsValue.{0} = {1}" [ field.name, elmToJsConverter field.fieldType ]
 
         fieldConverters =
             List.map fieldConverter fields |> List.filter (not << String.isEmpty) |> String.join ("\n")
@@ -155,7 +165,7 @@ elmToJsRecordConverter name fields =
             else
                 "var jsValue = Object.assign({}, original)\n" ++ fieldConverters ++ "\nreturn jsValue"
     in
-        "typeConverters.elmToJs" ++ name ++ " = original => {\n" ++ (indent body) ++ "\n}"
+        interpolate "typeConverters.elmToJs{0} = original => {\n{1}\n}\n" [ name, indent body ]
 
 
 jsToElmRecordConverter : String -> List Field -> String
@@ -165,13 +175,7 @@ jsToElmRecordConverter name fields =
             if String.isEmpty (jsToElmConverter field.fieldType) then
                 ""
             else
-                "value = original."
-                    ++ field.name
-                    ++ "; "
-                    ++ "elmValue."
-                    ++ field.name
-                    ++ " = "
-                    ++ jsToElmConverter field.fieldType
+                interpolate "value = original.{0}; elmValue.{0} = {1}" [ field.name, jsToElmConverter field.fieldType ]
 
         fieldConverters =
             List.map fieldConverter fields |> List.filter (not << String.isEmpty) |> String.join ("\n")
@@ -182,7 +186,7 @@ jsToElmRecordConverter name fields =
             else
                 "var elmValue = Object.assign({}, original)\n" ++ fieldConverters ++ "\nreturn elmValue"
     in
-        "typeConverters.jsToElm" ++ name ++ " = original => {\n" ++ (indent body) ++ "\n}"
+        interpolate "typeConverters.jsToElm{0} = original => {\n{1}\n}\n" [ name, indent body ]
 
 
 
@@ -265,18 +269,16 @@ generateJsFunction function =
                 "(value => " ++ elmToJsConverter fieldType ++ ")(args.shift())"
 
         params =
-            List.map param function.params
+            String.join ",\n" (List.map param function.params)
     in
-        "functions."
-            ++ function.name
-            ++ " = (...args) => {\n"
-            ++ "  var value = context."
-            ++ function.name
-            ++ "(\n"
-            ++ indent (String.join "\n" params)
-            ++ "\n  )\n  return "
-            ++ valueToElm function.result
-            ++ "\n}"
+        interpolate """
+functions.{0} = (...args) => {
+  var value = context.{0}(
+{1}
+  )
+  return {2}
+}
+""" [ function.name, indent (indent params), valueToElm function.result ]
 
 
 detectFeatures : List BridgeEntity -> Features
@@ -361,11 +363,3 @@ toJsId id =
 indent : String -> String
 indent lines =
     "  " ++ (String.split "\n" lines |> String.join "\n  ")
-
-
-jsPreamble : String
-jsPreamble =
-    """
-var typeConverters = {}
-var functions = {}
-    """ |> String.trim
