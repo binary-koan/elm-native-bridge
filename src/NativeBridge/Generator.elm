@@ -3,6 +3,7 @@ module NativeBridge.Generator exposing (..)
 import Task exposing (..)
 import NativeBridge.Fields exposing (..)
 import NativeBridge.Params exposing (..)
+import NativeBridge.ConverterGenerator exposing (..)
 
 
 type BridgeEntity
@@ -77,8 +78,8 @@ wrapJsModule moduleName content =
 generateEntities : List BridgeEntity -> Task String GeneratedFiles
 generateEntities entities =
     succeed
-        { elmFile = String.join "\n" (List.map generateElmEntity entities)
-        , jsFile = String.join "\n" (List.map generateJsEntity entities)
+        { elmFile = String.join "\n\n" (List.map generateElmEntity entities)
+        , jsFile = String.join "\n\n" (List.map generateJsEntity entities)
         , features = detectFeatures entities
         }
 
@@ -127,7 +128,61 @@ generateElmRecord record =
 
 generateJsRecord : RecordOptions -> String
 generateJsRecord record =
-    (jsTypeConverter "from" record.name record.fields) ++ "\n" ++ (jsTypeConverter "to" record.name record.fields)
+    (elmToJsRecordConverter record.name record.fields) ++ "\n" ++ (jsToElmRecordConverter record.name record.fields)
+
+
+elmToJsRecordConverter : String -> List Field -> String
+elmToJsRecordConverter name fields =
+    let
+        fieldConverter field =
+            if String.isEmpty (elmToJsConverter field.fieldType) then
+                ""
+            else
+                "value = original."
+                    ++ field.name
+                    ++ "; "
+                    ++ "jsValue."
+                    ++ field.name
+                    ++ " = "
+                    ++ elmToJsConverter field.fieldType
+
+        fieldConverters =
+            List.map fieldConverter fields |> List.filter (not << String.isEmpty) |> String.join ("\n")
+
+        body =
+            if (String.isEmpty fieldConverters) then
+                "return original"
+            else
+                "var jsValue = Object.assign({}, original)\n" ++ fieldConverters ++ "\nreturn jsValue"
+    in
+        "typeConverters.elmToJs" ++ name ++ " = function(original) {\n" ++ (indent body) ++ "\n}"
+
+
+jsToElmRecordConverter : String -> List Field -> String
+jsToElmRecordConverter name fields =
+    let
+        fieldConverter field =
+            if String.isEmpty (jsToElmConverter field.fieldType) then
+                ""
+            else
+                "value = original."
+                    ++ field.name
+                    ++ "; "
+                    ++ "elmValue."
+                    ++ field.name
+                    ++ " = "
+                    ++ jsToElmConverter field.fieldType
+
+        fieldConverters =
+            List.map fieldConverter fields |> List.filter (not << String.isEmpty) |> String.join ("\n")
+
+        body =
+            if (String.isEmpty fieldConverters) then
+                "return original"
+            else
+                "var elmValue = Object.assign({}, original)\n" ++ fieldConverters ++ "\nreturn elmValue"
+    in
+        "typeConverters.jsToElm" ++ name ++ " = function(original) {\n" ++ (indent body) ++ "\n}"
 
 
 
@@ -171,45 +226,6 @@ generateElmFunction function =
 generateJsFunction : FunctionOptions -> String
 generateJsFunction function =
     ""
-
-
-
--- Utilities
-
-
-jsTypeConverter : String -> String -> List Field -> String
-jsTypeConverter direction name fields =
-    let
-        converterFor fieldType =
-            case fieldType of
-                ListField t ->
-                    direction ++ "List(" ++ (converterFor t) ++ ")"
-
-                MaybeField t ->
-                    direction ++ "Maybe(" ++ (converterFor t) ++ ")"
-
-                DictField t ->
-                    direction ++ "Dict(" ++ (converterFor t) ++ ")"
-
-                _ ->
-                    ""
-
-        fieldConverter field =
-            if String.isEmpty (converterFor field.fieldType) then
-                ""
-            else
-                "value." ++ field.name ++ " = " ++ converterFor field.fieldType ++ "(original." ++ field.name ++ ")"
-
-        fieldConverters =
-            List.map fieldConverter fields |> List.filter (not << String.isEmpty) |> String.join ("\n")
-
-        body =
-            if (String.isEmpty fieldConverters) then
-                "return original"
-            else
-                "var value = Object.assign({}, original)\n" ++ fieldConverters ++ "\nreturn value"
-    in
-        "typeConverters." ++ (converterName direction name) ++ " = function(original) {\n" ++ (indent body) ++ "\n}"
 
 
 detectFeatures : List BridgeEntity -> Features
