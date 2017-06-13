@@ -6,17 +6,18 @@ import Task exposing (Task)
 
 type alias BridgeGenerator =
     { moduleName : String
+    , repoName : String
     , subject : String
-    , types : List BridgeType
-    , functions : List BridgeFunction
+    , types : List TypeDefinition
+    , functions : List FunctionDefinition
     , rawElm : String
-    , rawJS : String
-    , valueConverters : Dict String Converter
-    , resultTransformers : Dict String Transformer
+    , rawJs : String
+    , toJsConverters : Dict String (String -> String)
+    , toElmConverters : Dict String (String -> String)
     }
 
 
-type BridgeType
+type TypeDefinition
     = Record RecordOptions
     | Union UnionOptions
 
@@ -34,11 +35,16 @@ type alias UnionOptions =
     }
 
 
-type alias BridgeFunction =
-    { jsName : String
-    , elmName : String
-    , definition : String
+type alias FunctionDefinition =
+    { jsName : Maybe String
+    , signature : String
+    , isMethod : Bool
     }
+
+
+type JsValue
+    = RawJs String
+    | JsString String
 
 
 type alias Converter =
