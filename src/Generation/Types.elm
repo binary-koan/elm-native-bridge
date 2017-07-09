@@ -10,12 +10,6 @@ type alias GeneratedType =
     }
 
 
-type alias Annotation =
-    { name : String
-    , params : List String
-    }
-
-
 findTypes : List Statement -> Result String (List GeneratedType)
 findTypes statements =
     let
@@ -31,7 +25,7 @@ findTypes statements =
                     addTypeAliasDeclaration qualifier def types
 
                 _ ->
-                    Ok types
+                    Ok (removeAnnotation types)
     in
         List.foldl (\stmt types -> Result.andThen (findType stmt) types) (Ok []) statements
 
@@ -66,3 +60,17 @@ addTypeAliasDeclaration qualifier def types =
 emptyType : GeneratedType
 emptyType =
     { annotations = [], declaration = Nothing }
+
+
+removeAnnotation : List GeneratedType -> List GeneratedType
+removeAnnotation types =
+    let
+        firstType =
+            Maybe.withDefault emptyType (List.head types)
+    in
+        case firstType.annotations of
+            [] ->
+                types
+
+            _ ->
+                Maybe.withDefault [] (List.tail types)
