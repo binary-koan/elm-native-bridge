@@ -10,7 +10,7 @@ type alias GeneratedType =
     }
 
 
-findTypes : List Statement -> Result String (List GeneratedType)
+findTypes : List Statement -> List GeneratedType
 findTypes statements =
     let
         findType stmt types =
@@ -25,12 +25,12 @@ findTypes statements =
                     addTypeAliasDeclaration qualifier def types
 
                 _ ->
-                    Ok (removeAnnotation types)
+                    removeAnnotation types
     in
-        List.foldl (\stmt types -> Result.andThen (findType stmt) types) (Ok []) statements
+        List.foldl findType [] statements
 
 
-addAnnotations : String -> List GeneratedType -> Result String (List GeneratedType)
+addAnnotations : String -> List GeneratedType -> List GeneratedType
 addAnnotations text types =
     let
         firstType =
@@ -41,20 +41,20 @@ addAnnotations text types =
     in
         case firstType.declaration of
             Nothing ->
-                Ok <| (addAnnotationsTo firstType) :: Maybe.withDefault [] (List.tail types)
+                (addAnnotationsTo firstType) :: Maybe.withDefault [] (List.tail types)
 
             Just declaration ->
-                Ok <| (addAnnotationsTo emptyType) :: types
+                (addAnnotationsTo emptyType) :: types
 
 
-addTypeDeclaration : Type -> List Type -> List GeneratedType -> Result String (List GeneratedType)
+addTypeDeclaration : Type -> List Type -> List GeneratedType -> List GeneratedType
 addTypeDeclaration qualifier defs types =
-    Ok types
+    types
 
 
-addTypeAliasDeclaration : Type -> Type -> List GeneratedType -> Result String (List GeneratedType)
+addTypeAliasDeclaration : Type -> Type -> List GeneratedType -> List GeneratedType
 addTypeAliasDeclaration qualifier def types =
-    Ok types
+    types
 
 
 emptyType : GeneratedType
