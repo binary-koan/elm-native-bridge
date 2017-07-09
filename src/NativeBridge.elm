@@ -4,6 +4,7 @@ import Task exposing (Task)
 import Ast exposing (parseModule)
 import Ast.BinOp exposing (operators)
 import Ast.Statement exposing (Statement)
+import Generation.Types exposing (..)
 
 
 elmFile =
@@ -29,6 +30,7 @@ import Task exposing (Task)
 > Enum: `CanRead` is `subject.constants.R_OK`
 > Enum: `CanWrite` is `subject.constants.W_OK`
 > Enum: `CanExecute` is `subject.constants.X_OK`
+> Enum Default: `CanRead`
 -}
 type FileAccess
     = CanAccess
@@ -49,6 +51,7 @@ type FileAccess
 > Enum: `AppendStrict` is string `ax`
 > Enum: `ReadAppend` is string `a+`
 > Enum: `ReadAppendStrict` is string `ax+`
+> Enum Default: `Read`
 -}
 type OpenFlag
     = Read
@@ -71,7 +74,8 @@ type alias AppendOptions =
 
 
 type alias FileError =
-    { code : Maybe String
+    { message : Maybe String
+    , code : Maybe String
     , syscall : Maybe String
     , path : Maybe String
     }
