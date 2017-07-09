@@ -5,5 +5,5 @@ type Type
     = BasicType
     | MaybeType Type
     | ListType Type
-    | UnionType (List Type)
-    | RecordType (List ( String, Type ))
+    | UnionType String (List String)
+    | RecordType String (List ( String, Type ))
