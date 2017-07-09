@@ -19,10 +19,10 @@ findTypes statements =
                     addAnnotations text types
 
                 TypeDeclaration qualifier defs ->
-                    addTypeDeclaration qualifier defs types
+                    addTypeDeclaration (TypeDeclaration qualifier defs) types
 
                 TypeAliasDeclaration qualifier def ->
-                    addTypeAliasDeclaration qualifier def types
+                    addTypeDeclaration (TypeAliasDeclaration qualifier def) types
 
                 _ ->
                     removeAnnotation types
@@ -33,28 +33,37 @@ findTypes statements =
 addAnnotations : String -> List GeneratedType -> List GeneratedType
 addAnnotations text types =
     let
-        firstType =
-            Maybe.withDefault emptyType (List.head types)
-
         addAnnotationsTo t =
             { t | annotations = t.annotations ++ findAnnotations text }
     in
-        case firstType.declaration of
+        case (firstType types).declaration of
             Nothing ->
-                (addAnnotationsTo firstType) :: Maybe.withDefault [] (List.tail types)
+                (addAnnotationsTo (firstType types)) :: Maybe.withDefault [] (List.tail types)
 
             Just declaration ->
                 (addAnnotationsTo emptyType) :: types
 
 
-addTypeDeclaration : Type -> List Type -> List GeneratedType -> List GeneratedType
-addTypeDeclaration qualifier defs types =
-    types
+addTypeDeclaration : Statement -> List GeneratedType -> List GeneratedType
+addTypeDeclaration declaration types =
+    let
+        first =
+            firstType types
+    in
+        case ( types, first.declaration ) of
+            ( [], _ ) ->
+                [ { first | declaration = Just declaration } ]
+
+            ( _, Nothing ) ->
+                { first | declaration = Just declaration } :: Maybe.withDefault [] (List.tail types)
+
+            _ ->
+                { emptyType | declaration = Just declaration } :: types
 
 
-addTypeAliasDeclaration : Type -> Type -> List GeneratedType -> List GeneratedType
-addTypeAliasDeclaration qualifier def types =
-    types
+firstType : List GeneratedType -> GeneratedType
+firstType types =
+    Maybe.withDefault emptyType (List.head types)
 
 
 emptyType : GeneratedType
