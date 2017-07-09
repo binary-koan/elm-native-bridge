@@ -4,7 +4,7 @@ import Task exposing (Task)
 import Ast exposing (parseModule)
 import Ast.BinOp exposing (operators)
 import Ast.Statement exposing (Statement)
-import Utils.Interpolate exposing (..)
+import Utils.Format exposing (..)
 import Types.Discover exposing (findTypes)
 import Types.Refine exposing (refineTypes)
 import Types.Generate exposing (generateTypeConverters)
@@ -235,7 +235,7 @@ generateModule statements =
             findTypes statements |> refineTypes |> Result.map generateTypeConverters
 
         output fns ts =
-            interpolate """
+            format """
                 var {0} = (() => {
                     var typeConverters = {}, functions = {}
                     var context = require('fs')

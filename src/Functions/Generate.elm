@@ -1,6 +1,6 @@
 module Functions.Generate exposing (..)
 
-import Utils.Interpolate exposing (..)
+import Utils.Format exposing (..)
 import Types.Refine exposing (..)
 import Functions.Refine exposing (..)
 
@@ -12,7 +12,7 @@ generateFunctions fns =
 
 generateFunction : Function -> String
 generateFunction fn =
-    interpolate """
+    format """
         functions.{0} = {1}((...args) => {
             args = [{2}]
             {3}
@@ -40,14 +40,14 @@ wrapOutput : Function -> String
 wrapOutput fn =
     case fn.result of
         BasicOutput t ->
-            interpolate """
+            format """
                 var result = {0}(...args)
                 return {1}
                 """
                 [ fn.name, jsToElmValue "result" t ]
 
         ResultOutput err ok ->
-            interpolate """
+            format """
                 try {
                     var result = {0}(...args)
                     return {1}
@@ -58,7 +58,7 @@ wrapOutput fn =
                 [ fn.name, jsToElmValue "result" ok, jsToElmValue "err" err ]
 
         TaskOutput err ok ->
-            interpolate """
+            format """
                 return _elm_lang$core$Native_Scheduler.nativeBinding(callback => {
                     {0}(...args, function(err, result) {
                         if (!err) {
@@ -76,13 +76,13 @@ elmToJsValue : String -> Type -> String
 elmToJsValue varName t =
     case t of
         ListType t ->
-            interpolate "_elm_lang$core$Native_List.toArray({0}){1}" [ varName, listValuesToJs t ]
+            format "_elm_lang$core$Native_List.toArray({0}){1}" [ varName, listValuesToJs t ]
 
         MaybeType t ->
-            interpolate "{0}.ctor === 'Just' ? {1} : null" [ varName, elmToJsValue (varName ++ "._0") t ]
+            format "{0}.ctor === 'Just' ? {1} : null" [ varName, elmToJsValue (varName ++ "._0") t ]
 
         DictType t ->
-            interpolate
+            format
                 """
                 _elm_lang$core$Dict$foldr(F3((key, value, obj) => {
                     obj[key] = {0}
@@ -92,10 +92,10 @@ elmToJsValue varName t =
                 [ elmToJsValue "value" t, varName ]
 
         RecordType name _ ->
-            interpolate "elmToJs{0}({1})" [ name, varName ]
+            format "elmToJs{0}({1})" [ name, varName ]
 
         UnionType union ->
-            interpolate "elmToJs{0}({1})" [ union.name, varName ]
+            format "elmToJs{0}({1})" [ union.name, varName ]
 
         _ ->
             ""
@@ -105,14 +105,14 @@ jsToElmValue : String -> Type -> String
 jsToElmValue varName t =
     case t of
         ListType t ->
-            interpolate "_elm_lang$core$Native_List.fromArray({0})" [ arrayToElmValues varName t ]
+            format "_elm_lang$core$Native_List.fromArray({0})" [ arrayToElmValues varName t ]
 
         MaybeType t ->
-            interpolate "{0} == null ? _elm_lang$core$Maybe$Nothing : _elm_lang$core$Maybe$Just({1})"
+            format "{0} == null ? _elm_lang$core$Maybe$Nothing : _elm_lang$core$Maybe$Just({1})"
                 [ varName, jsToElmValue varName t ]
 
         DictType t ->
-            interpolate
+            format
                 """
                 (() => {
                     var dict = _elm_lang$core$Dict$empty
@@ -123,10 +123,10 @@ jsToElmValue varName t =
                 [ varName, jsToElmValue "dict[key]" t ]
 
         RecordType name _ ->
-            interpolate "jsToElm{0}({1})" [ name, varName ]
+            format "jsToElm{0}({1})" [ name, varName ]
 
         UnionType union ->
-            interpolate "jsToElm{0}({1})" [ union.name, varName ]
+            format "jsToElm{0}({1})" [ union.name, varName ]
 
         BasicType ->
             varName
