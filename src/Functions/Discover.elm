@@ -1,4 +1,4 @@
-module Generation.Functions exposing (findFunctions)
+module Functions.Discover exposing (discoverFunctions)
 
 import Ast.Statement exposing (..)
 import Ast.Expression exposing (..)
@@ -21,8 +21,8 @@ type Completeness
     | Complete
 
 
-findFunctions : List Statement -> List GeneratedFunction
-findFunctions statements =
+discoverFunctions : List Statement -> List GeneratedFunction
+discoverFunctions statements =
     let
         findType stmt types =
             case stmt of

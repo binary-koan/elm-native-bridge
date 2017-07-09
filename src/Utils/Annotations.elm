@@ -1,4 +1,4 @@
-module Generation.Annotations exposing (Annotation, findAnnotations)
+module Utils.Annotations exposing (Annotation, findAnnotations)
 
 import Regex exposing (..)
 
