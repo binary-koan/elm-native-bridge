@@ -5,5 +5,14 @@ type Type
     = BasicType
     | MaybeType Type
     | ListType Type
-    | UnionType String (List String)
+    | DictType Type
+    | UnionType UnionOptions
     | RecordType String (List ( String, Type ))
+
+
+type alias UnionOptions =
+    { name : String
+    , values : List ( String, String )
+    , defaultCtor : String
+    , defaultJs : String
+    }

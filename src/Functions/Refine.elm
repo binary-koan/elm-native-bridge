@@ -6,5 +6,11 @@ import Types.Refine exposing (..)
 type alias Function =
     { name : String
     , params : List Type
-    , result : Type
+    , result : FunctionOutput
     }
+
+
+type FunctionOutput
+    = BasicOutput Type
+    | ResultOutput Type Type
+    | TaskOutput Type Type
