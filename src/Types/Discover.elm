@@ -1,16 +1,16 @@
-module Generation.Types exposing (findTypes)
+module Types.Discover exposing (findTypes, DiscoveredType)
 
 import Ast.Statement exposing (..)
-import Generation.Annotations exposing (..)
+import Utils.Annotations exposing (..)
 
 
-type alias GeneratedType =
+type alias DiscoveredType =
     { annotations : List Annotation
     , declaration : Maybe Statement
     }
 
 
-findTypes : List Statement -> List GeneratedType
+findTypes : List Statement -> List DiscoveredType
 findTypes statements =
     let
         findType stmt types =
@@ -30,7 +30,7 @@ findTypes statements =
         List.foldl findType [] statements
 
 
-addAnnotations : String -> List GeneratedType -> List GeneratedType
+addAnnotations : String -> List DiscoveredType -> List DiscoveredType
 addAnnotations text types =
     let
         addAnnotationsTo t =
@@ -44,7 +44,7 @@ addAnnotations text types =
                 (addAnnotationsTo emptyType) :: types
 
 
-addTypeDeclaration : Statement -> List GeneratedType -> List GeneratedType
+addTypeDeclaration : Statement -> List DiscoveredType -> List DiscoveredType
 addTypeDeclaration declaration types =
     let
         first =
@@ -61,17 +61,17 @@ addTypeDeclaration declaration types =
                 { emptyType | declaration = Just declaration } :: types
 
 
-firstType : List GeneratedType -> GeneratedType
+firstType : List DiscoveredType -> DiscoveredType
 firstType types =
     Maybe.withDefault emptyType (List.head types)
 
 
-emptyType : GeneratedType
+emptyType : DiscoveredType
 emptyType =
     { annotations = [], declaration = Nothing }
 
 
-removeAnnotation : List GeneratedType -> List GeneratedType
+removeAnnotation : List DiscoveredType -> List DiscoveredType
 removeAnnotation types =
     let
         firstType =

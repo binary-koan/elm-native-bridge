@@ -5,17 +5,21 @@ import Functions.Generate exposing (..)
 import Types.Refine exposing (..)
 
 
-generateTypeConverters : Type -> String
-generateTypeConverters t =
-    case t of
-        RecordType name fields ->
-            generateRecordConverters name fields
+generateTypeConverters : List Type -> String
+generateTypeConverters types =
+    let
+        converters t =
+            case t of
+                RecordType name fields ->
+                    generateRecordConverters name fields
 
-        UnionType union ->
-            generateUnionConverters union
+                UnionType union ->
+                    generateUnionConverters union
 
-        _ ->
-            ""
+                _ ->
+                    ""
+    in
+        String.join "\n" (List.map converters types)
 
 
 generateRecordConverters : String -> List ( String, Type ) -> String
@@ -70,7 +74,10 @@ generateUnionConverters union =
         typeConverters.jsToElm{0} = value => {1}
         typeConverters.elmToJs{0} = value => {2}
         """
-        [ name, jsToElmUnionConverter union.values union.defaultCtor, elmToJsUnionConverter union.values union.defaultJs ]
+        [ union.name
+        , jsToElmUnionConverter union.values union.defaultCtor
+        , elmToJsUnionConverter union.values union.defaultJs
+        ]
 
 
 jsToElmUnionConverter : List ( String, String ) -> String -> String

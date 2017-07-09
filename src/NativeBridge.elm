@@ -4,7 +4,13 @@ import Task exposing (Task)
 import Ast exposing (parseModule)
 import Ast.BinOp exposing (operators)
 import Ast.Statement exposing (Statement)
-import Generation.Types exposing (..)
+import Utils.Interpolate exposing (..)
+import Types.Discover exposing (findTypes)
+import Types.Refine exposing (refineTypes)
+import Types.Generate exposing (generateTypeConverters)
+import Functions.Discover exposing (findFunctions)
+import Functions.Refine exposing (refineFunctions)
+import Functions.Generate exposing (generateFunctions)
 
 
 elmFile =
@@ -206,9 +212,9 @@ generateNative content =
         ast =
             parseModule operators content
 
-        generated statements =
-            { content = generateModule statements
-            , filename = "Native/FS.js"
+        wrap content =
+            { content = content
+            , filename = "Native/FS.js" -- TODO proper filename
             }
     in
         case ast of
@@ -216,19 +222,32 @@ generateNative content =
                 Err (formatError details.data details.position messages)
 
             Ok ( _, _, statements ) ->
-                Ok (generated statements)
+                Result.map wrap (generateModule statements)
 
 
-generateModule : List Statement -> String
+generateModule : List Statement -> Result String String
 generateModule statements =
-    """
-    var binary_koan$Native$FS = (() => {
-        var typeConverters = {}, functions = {}
-        var context = require('fs')
+    let
+        functions =
+            findFunctions statements |> refineFunctions |> Result.map generateFunctions
 
-        return functions
-    })()
-    """
+        types =
+            findTypes statements |> refineTypes |> Result.map generateTypeConverters
+
+        output fns ts =
+            interpolate """
+                var {0} = (() => {
+                    var typeConverters = {}, functions = {}
+                    var context = require('fs')
+                    {1}
+                    {2}
+                    return functions
+                })()
+                """
+                -- TODO module name
+                [ "binary_koan$Native$FS", fns, ts ]
+    in
+        Result.map2 output functions types
 
 
 writeFiles : Result String GeneratedFile -> Task String String

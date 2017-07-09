@@ -1,5 +1,7 @@
 module Types.Refine exposing (..)
 
+import Types.Discover exposing (..)
+
 
 type Type
     = BasicType
@@ -16,3 +18,9 @@ type alias UnionOptions =
     , defaultCtor : String
     , defaultJs : String
     }
+
+
+refineTypes : List DiscoveredType -> Result String (List Type)
+refineTypes types =
+    -- TODO
+    Ok []

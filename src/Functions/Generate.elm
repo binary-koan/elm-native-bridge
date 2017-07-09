@@ -5,6 +5,11 @@ import Types.Refine exposing (..)
 import Functions.Refine exposing (..)
 
 
+generateFunctions : List Function -> String
+generateFunctions fns =
+    String.join "\n" (List.map generateFunction fns)
+
+
 generateFunction : Function -> String
 generateFunction fn =
     interpolate """
@@ -89,8 +94,8 @@ elmToJsValue varName t =
         RecordType name _ ->
             interpolate "elmToJs{0}({1})" [ name, varName ]
 
-        UnionType name _ ->
-            interpolate "elmToJs{0}({1})" [ name, varName ]
+        UnionType union ->
+            interpolate "elmToJs{0}({1})" [ union.name, varName ]
 
         _ ->
             ""
@@ -120,8 +125,8 @@ jsToElmValue varName t =
         RecordType name _ ->
             interpolate "jsToElm{0}({1})" [ name, varName ]
 
-        UnionType name _ ->
-            interpolate "jsToElm{0}({1})" [ name, varName ]
+        UnionType union ->
+            interpolate "jsToElm{0}({1})" [ union.name, varName ]
 
         BasicType ->
             varName

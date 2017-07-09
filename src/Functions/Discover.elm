@@ -1,11 +1,11 @@
-module Functions.Discover exposing (discoverFunctions)
+module Functions.Discover exposing (findFunctions, DiscoveredFunction)
 
 import Ast.Statement exposing (..)
 import Ast.Expression exposing (..)
-import Generation.Annotations exposing (..)
+import Utils.Annotations exposing (..)
 
 
-type alias GeneratedFunction =
+type alias DiscoveredFunction =
     { annotations : List Annotation
     , name : Maybe String
     , functionType : Maybe Type
@@ -21,8 +21,8 @@ type Completeness
     | Complete
 
 
-discoverFunctions : List Statement -> List GeneratedFunction
-discoverFunctions statements =
+findFunctions : List Statement -> List DiscoveredFunction
+findFunctions statements =
     let
         findType stmt types =
             case stmt of
@@ -41,7 +41,7 @@ discoverFunctions statements =
         List.foldl findType [] statements
 
 
-addAnnotations : String -> List GeneratedFunction -> List GeneratedFunction
+addAnnotations : String -> List DiscoveredFunction -> List DiscoveredFunction
 addAnnotations text functions =
     let
         first =
@@ -58,7 +58,7 @@ addAnnotations text functions =
                 (addAnnotationsTo first) :: Maybe.withDefault [] (List.tail functions)
 
 
-addTypeDeclaration : String -> Type -> List GeneratedFunction -> List GeneratedFunction
+addTypeDeclaration : String -> Type -> List DiscoveredFunction -> List DiscoveredFunction
 addTypeDeclaration name t functions =
     let
         first =
@@ -75,7 +75,7 @@ addTypeDeclaration name t functions =
                 { emptyFn | name = Just name, functionType = Just t } :: Maybe.withDefault [] (List.tail functions)
 
 
-addDeclaration : String -> List Expression -> Expression -> List GeneratedFunction -> List GeneratedFunction
+addDeclaration : String -> List Expression -> Expression -> List DiscoveredFunction -> List DiscoveredFunction
 addDeclaration name params body functions =
     let
         first =
@@ -94,17 +94,17 @@ addDeclaration name params body functions =
                 Maybe.withDefault [] (List.tail functions)
 
 
-firstFn : List GeneratedFunction -> GeneratedFunction
+firstFn : List DiscoveredFunction -> DiscoveredFunction
 firstFn functions =
     Maybe.withDefault emptyFn (List.head functions)
 
 
-emptyFn : GeneratedFunction
+emptyFn : DiscoveredFunction
 emptyFn =
     { annotations = [], name = Nothing, functionType = Nothing, params = Nothing, body = Nothing }
 
 
-completeness : GeneratedFunction -> Completeness
+completeness : DiscoveredFunction -> Completeness
 completeness fn =
     case ( fn.annotations, fn.functionType, fn.body ) of
         ( [], Nothing, Nothing ) ->
@@ -120,7 +120,7 @@ completeness fn =
             Complete
 
 
-removeAnnotation : List GeneratedFunction -> List GeneratedFunction
+removeAnnotation : List DiscoveredFunction -> List DiscoveredFunction
 removeAnnotation functions =
     let
         firstFn =
