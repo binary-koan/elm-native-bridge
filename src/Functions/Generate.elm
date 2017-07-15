@@ -97,8 +97,8 @@ elmToJsValue varName t =
         UnionType union ->
             format "elmToJs{0}({1})" [ union.name, varName ]
 
-        _ ->
-            ""
+        BasicType ->
+            varName
 
 
 jsToElmValue : String -> Type -> String
