@@ -1,5 +1,6 @@
 module Main exposing (main)
 
+import Regex exposing (regex)
 import Task exposing (Task)
 import Ast exposing (parseModule)
 import Ast.BinOp exposing (operators)
@@ -199,22 +200,25 @@ main =
             ( ()
             , Task.attempt
                 (\_ -> ())
-                (writeFiles (generateNative elmFile))
+                (writeFiles (generateNative "FS.elm" elmFile))
             )
         , update = \_ _ -> ( (), Cmd.none )
         , subscriptions = \_ -> Sub.none
         }
 
 
-generateNative : String -> Result String GeneratedFile
-generateNative content =
+generateNative : String -> String -> Result String GeneratedFile
+generateNative filename content =
     let
+        moduleName =
+            Regex.replace (Regex.AtMost 1) (regex "\\.elm$") (always "") filename
+
         ast =
             parseModule operators content
 
         wrap content =
             { content = content
-            , filename = "Native/FS.js" -- TODO proper filename
+            , filename = "Native/" ++ moduleName ++ ".js"
             }
     in
         case ast of
@@ -222,14 +226,14 @@ generateNative content =
                 Err (formatError details.data details.position messages)
 
             Ok ( _, _, statements ) ->
-                Result.map wrap (generateModule statements)
+                Result.map wrap (generateModule moduleName statements)
 
 
-generateModule : List Statement -> Result String String
-generateModule statements =
+generateModule : String -> List Statement -> Result String String
+generateModule moduleName statements =
     let
         functions =
-            findFunctions statements |> refineFunctions |> Result.map generateFunctions
+            findFunctions statements |> refineFunctions moduleName |> Result.map generateFunctions
 
         types =
             findTypes statements |> refineTypes |> Result.map generateTypeConverters

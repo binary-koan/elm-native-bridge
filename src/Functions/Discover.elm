@@ -7,7 +7,6 @@ import Utils.Annotations exposing (..)
 
 type alias DiscoveredFunction =
     { annotations : List Annotation
-    , name : String
     , functionType : Type
     , params : List Expression
     , body : Expression
@@ -53,9 +52,8 @@ findFunctions statements =
 
 completeFunction : PartialFunction -> Maybe DiscoveredFunction
 completeFunction fn =
-    Maybe.map4
-        (\n t p b -> { annotations = fn.annotations, name = n, functionType = t, params = p, body = b })
-        fn.name
+    Maybe.map3
+        (\t p b -> { annotations = fn.annotations, functionType = t, params = p, body = b })
         fn.functionType
         fn.params
         fn.body
