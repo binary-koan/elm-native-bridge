@@ -9,6 +9,43 @@ format string args =
         |> formatArg 0 args
 
 
+formatArg : Int -> List String -> String -> String
+formatArg index args string =
+    case List.head args of
+        Just value ->
+            replaceWithIndent ("{" ++ toString index ++ "}") value string
+                |> formatArg (index + 1) (Maybe.withDefault [] (List.tail args))
+
+        Nothing ->
+            string
+
+
+replaceWithIndent : String -> String -> String -> String
+replaceWithIndent old new string =
+    string
+        |> String.split old
+        |> joinWithIndent new
+
+
+joinWithIndent : String -> List String -> String
+joinWithIndent joiner parts =
+    case parts of
+        [] ->
+            ""
+
+        [ end ] ->
+            end
+
+        first :: others ->
+            first ++ indent (lastLineIndent first) joiner ++ (joinWithIndent joiner others)
+
+
+indent : String -> String -> String
+indent amount str =
+    String.split "\n" str
+        |> String.join ("\n" ++ amount)
+
+
 deindent : String -> String
 deindent string =
     let
@@ -32,19 +69,19 @@ deindent string =
                     |> String.join "\n"
 
 
-formatArg : Int -> List String -> String -> String
-formatArg index args string =
-    case List.head args of
-        Just value ->
-            replaceAll ("{" ++ toString index ++ "}") value string
-                |> formatArg (index + 1) (Maybe.withDefault [] (List.tail args))
+lastLineIndent : String -> String
+lastLineIndent str =
+    let
+        lastLine =
+            String.split "\n" str |> List.reverse |> List.head |> Maybe.withDefault ""
 
-        Nothing ->
-            string
+        match =
+            find (AtMost 1) (regex "^([ \t]+).*$") lastLine
+                |> List.head
+    in
+        case match of
+            Nothing ->
+                ""
 
-
-replaceAll : String -> String -> String -> String
-replaceAll old new string =
-    string
-        |> String.split old
-        |> String.join new
+            Just match ->
+                List.head match.submatches |> Maybe.withDefault Nothing |> Maybe.withDefault ""
