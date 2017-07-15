@@ -7,6 +7,15 @@ import Utils.Annotations exposing (..)
 
 type alias DiscoveredFunction =
     { annotations : List Annotation
+    , name : String
+    , functionType : Type
+    , params : List Expression
+    , body : Expression
+    }
+
+
+type alias PartialFunction =
+    { annotations : List Annotation
     , name : Maybe String
     , functionType : Maybe Type
     , params : Maybe (List Expression)
@@ -24,7 +33,7 @@ type Completeness
 findFunctions : List Statement -> List DiscoveredFunction
 findFunctions statements =
     let
-        findType stmt types =
+        findFunction stmt types =
             case stmt of
                 Comment text ->
                     addAnnotations text types
@@ -38,10 +47,21 @@ findFunctions statements =
                 _ ->
                     removeAnnotation types
     in
-        List.foldl findType [] statements
+        List.foldl findFunction [] statements
+            |> List.filterMap completeFunction
 
 
-addAnnotations : String -> List DiscoveredFunction -> List DiscoveredFunction
+completeFunction : PartialFunction -> Maybe DiscoveredFunction
+completeFunction fn =
+    Maybe.map4
+        (\n t p b -> { annotations = fn.annotations, name = n, functionType = t, params = p, body = b })
+        fn.name
+        fn.functionType
+        fn.params
+        fn.body
+
+
+addAnnotations : String -> List PartialFunction -> List PartialFunction
 addAnnotations text functions =
     let
         first =
@@ -58,7 +78,7 @@ addAnnotations text functions =
                 (addAnnotationsTo first) :: Maybe.withDefault [] (List.tail functions)
 
 
-addTypeDeclaration : String -> Type -> List DiscoveredFunction -> List DiscoveredFunction
+addTypeDeclaration : String -> Type -> List PartialFunction -> List PartialFunction
 addTypeDeclaration name t functions =
     let
         first =
@@ -75,7 +95,7 @@ addTypeDeclaration name t functions =
                 { emptyFn | name = Just name, functionType = Just t } :: Maybe.withDefault [] (List.tail functions)
 
 
-addDeclaration : String -> List Expression -> Expression -> List DiscoveredFunction -> List DiscoveredFunction
+addDeclaration : String -> List Expression -> Expression -> List PartialFunction -> List PartialFunction
 addDeclaration name params body functions =
     let
         first =
@@ -94,17 +114,17 @@ addDeclaration name params body functions =
                 Maybe.withDefault [] (List.tail functions)
 
 
-firstFn : List DiscoveredFunction -> DiscoveredFunction
+firstFn : List PartialFunction -> PartialFunction
 firstFn functions =
     Maybe.withDefault emptyFn (List.head functions)
 
 
-emptyFn : DiscoveredFunction
+emptyFn : PartialFunction
 emptyFn =
     { annotations = [], name = Nothing, functionType = Nothing, params = Nothing, body = Nothing }
 
 
-completeness : DiscoveredFunction -> Completeness
+completeness : PartialFunction -> Completeness
 completeness fn =
     case ( fn.annotations, fn.functionType, fn.body ) of
         ( [], Nothing, Nothing ) ->
@@ -120,7 +140,7 @@ completeness fn =
             Complete
 
 
-removeAnnotation : List DiscoveredFunction -> List DiscoveredFunction
+removeAnnotation : List PartialFunction -> List PartialFunction
 removeAnnotation functions =
     let
         firstFn =
