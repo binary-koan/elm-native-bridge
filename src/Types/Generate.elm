@@ -94,7 +94,7 @@ jsToElmUnionConverter options default =
         format """
             value => {
                 {0} else {
-                    return {1}
+                    return { ctor: "{1}" }
                 }
             }
             """
@@ -110,7 +110,7 @@ elmToJsUnionConverter options default =
                     return {1}
                 }
                 """
-                [ value, constructor ]
+                [ constructor, value ]
     in
         format """
             value => {
