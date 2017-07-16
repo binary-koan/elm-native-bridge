@@ -44,7 +44,7 @@ wrapOutput fn =
                 var result = {0}(...args)
                 return {1}
                 """
-                [ fn.name, jsToElmValue "result" t ]
+                [ qualifiedName fn, jsToElmValue "result" t ]
 
         ResultOutput err ok ->
             format """
@@ -55,7 +55,7 @@ wrapOutput fn =
                     return {2}
                 }
                 """
-                [ fn.name, jsToElmValue "result" ok, jsToElmValue "err" err ]
+                [ qualifiedName fn, jsToElmValue "result" ok, jsToElmValue "err" err ]
 
         TaskOutput err ok ->
             format """
@@ -69,4 +69,9 @@ wrapOutput fn =
                     })
                 })
                 """
-                [ fn.name, jsToElmValue "result" ok, jsToElmValue "err" err ]
+                [ qualifiedName fn, jsToElmValue "result" ok, jsToElmValue "err" err ]
+
+
+qualifiedName : Function -> String
+qualifiedName fn =
+    "subject." ++ fn.name

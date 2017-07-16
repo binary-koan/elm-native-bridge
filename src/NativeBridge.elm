@@ -247,7 +247,7 @@ generateModule moduleName statements =
             format """
                 var {0} = (() => {
                     var typeConverters = {}, functions = {}
-                    var context = require('fs')
+                    var subject = require('fs')
 
                     {1}
 
