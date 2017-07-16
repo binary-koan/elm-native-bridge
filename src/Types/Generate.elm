@@ -1,7 +1,6 @@
-module Types.Generate exposing (..)
+module Types.Generate exposing (generateTypeConverters, jsToElmValue, elmToJsValue)
 
 import Utils.Format exposing (..)
-import Functions.Generate exposing (..)
 import Types.Refine exposing (..)
 
 
@@ -20,6 +19,76 @@ generateTypeConverters types =
                     ""
     in
         String.join "\n" (List.map converters types)
+
+
+jsToElmValue : String -> BridgeType -> String
+jsToElmValue varName t =
+    case t of
+        ListType t ->
+            format "_elm_lang$core$Native_List.fromArray({0})" [ arrayToElmValues varName t ]
+
+        MaybeType t ->
+            format "{0} == null ? _elm_lang$core$Maybe$Nothing : _elm_lang$core$Maybe$Just({1})"
+                [ varName, jsToElmValue varName t ]
+
+        DictType t ->
+            format
+                """
+                (() => {
+                    var dict = _elm_lang$core$Dict$empty
+                    Object.keys({0}).forEach(key => dict = _elm_lang$core$Dict$insert(key)({1})(dict))
+                    return dict
+                })()
+                """
+                [ varName, jsToElmValue "dict[key]" t ]
+
+        RecordType name _ ->
+            format "jsToElm{0}({1})" [ name, varName ]
+
+        UnionType union ->
+            format "jsToElm{0}({1})" [ union.name, varName ]
+
+        BasicType ->
+            varName
+
+
+arrayToElmValues : String -> BridgeType -> String
+arrayToElmValues varName contentType =
+    varName ++ ".map(value => " ++ (jsToElmValue "value" contentType) ++ ")"
+
+
+elmToJsValue : String -> BridgeType -> String
+elmToJsValue varName t =
+    case t of
+        ListType t ->
+            format "_elm_lang$core$Native_List.toArray({0}){1}" [ varName, listValuesToJs t ]
+
+        MaybeType t ->
+            format "{0}.ctor === 'Just' ? {1} : null" [ varName, elmToJsValue (varName ++ "._0") t ]
+
+        DictType t ->
+            format
+                """
+                _elm_lang$core$Dict$foldr(F3((key, value, obj) => {
+                    obj[key] = {0}
+                    return obj
+                }), {}, {1})
+                """
+                [ elmToJsValue "value" t, varName ]
+
+        RecordType name _ ->
+            format "elmToJs{0}({1})" [ name, varName ]
+
+        UnionType union ->
+            format "elmToJs{0}({1})" [ union.name, varName ]
+
+        BasicType ->
+            varName
+
+
+listValuesToJs : BridgeType -> String
+listValuesToJs contentType =
+    ".map(value => " ++ (elmToJsValue "value" contentType) ++ ")"
 
 
 generateRecordConverters : String -> List ( String, BridgeType ) -> String
