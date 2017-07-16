@@ -93,12 +93,12 @@ jsToElmUnionConverter options default =
     in
         format """
             value => {
-                {1} else {
-                    return {2}
+                {0} else {
+                    return {1}
                 }
             }
             """
-            [ String.join "\n" (List.map converter options), default ]
+            [ String.join " else " (List.map converter options), default ]
 
 
 elmToJsUnionConverter : List ( String, String ) -> String -> String
@@ -114,9 +114,9 @@ elmToJsUnionConverter options default =
     in
         format """
             value => {
-                {1} else {
-                    return {2}
+                {0} else {
+                    return {1}
                 }
             }
             """
-            [ String.join "\n" (List.map converter options), default ]
+            [ String.join " else " (List.map converter options), default ]

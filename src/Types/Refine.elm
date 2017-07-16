@@ -72,9 +72,9 @@ buildUnion : String -> List String -> BridgeType
 buildUnion name options =
     UnionType
         { name = name
-        , values = List.map (\v -> ( v, "0 /*TODO parse value */" )) options
-        , defaultCtor = Maybe.withDefault "0 /* TODO default? */" (List.head options)
-        , defaultJs = "0 /* TODO */"
+        , values = List.map (\v -> ( v, "TODO parse value" )) options
+        , defaultCtor = Maybe.withDefault "TODO default?" (List.head options)
+        , defaultJs = "TODO default?"
         }
 
 
