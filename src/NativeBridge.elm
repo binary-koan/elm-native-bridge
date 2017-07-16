@@ -243,13 +243,16 @@ generateModule moduleName statements =
                 var {0} = (() => {
                     var typeConverters = {}, functions = {}
                     var context = require('fs')
+
                     {1}
+
                     {2}
+
                     return functions
                 })()
                 """
                 -- TODO module name
-                [ "binary_koan$Native$FS", fns, ts ]
+                [ "binary_koan$Native$FS", ts, fns ]
     in
         Result.map2 output functions types
 
