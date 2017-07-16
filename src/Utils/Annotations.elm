@@ -5,7 +5,7 @@ import Regex exposing (..)
 
 type alias Annotation =
     { name : String
-    , params : List String
+    , params : List ( String, String )
     }
 
 
@@ -28,16 +28,27 @@ matchName : Match -> Maybe String
 matchName match =
     List.head match.submatches
         |> Maybe.withDefault Nothing
+        |> Maybe.map cleanName
 
 
-matchParams : Match -> String -> List String
+matchParams : Match -> String -> List ( String, String )
 matchParams match line =
     let
         paramsPart =
             String.dropLeft (match.index + String.length match.match) line
 
-        firstSubmatch submatches =
-            List.head submatches |> Maybe.withDefault Nothing |> Maybe.withDefault ""
+        nameAndContent submatches =
+            case submatches of
+                [ name, content ] ->
+                    ( cleanName (Maybe.withDefault "" name), Maybe.withDefault "" content )
+
+                _ ->
+                    ( "", "" )
     in
-        find All (regex "`([^`]+)`") line
-            |> List.map (.submatches >> firstSubmatch)
+        find All (regex "([^`]*)`([^`]+)`") paramsPart
+            |> List.map (.submatches >> nameAndContent)
+
+
+cleanName : String -> String
+cleanName =
+    String.toLower >> String.trim
