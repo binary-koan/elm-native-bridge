@@ -1,4 +1,4 @@
-module Types.Discover exposing (findTypes, DiscoveredType)
+module Types.Discover exposing (findTypes, DiscoveredType, DiscoveredDeclaration(..))
 
 import Ast.Statement exposing (..)
 import Utils.Annotations exposing (..)
@@ -6,8 +6,13 @@ import Utils.Annotations exposing (..)
 
 type alias DiscoveredType =
     { annotations : List Annotation
-    , declaration : Maybe Statement
+    , declaration : Maybe DiscoveredDeclaration
     }
+
+
+type DiscoveredDeclaration
+    = UnionDeclaration Type (List Type)
+    | RecordDeclaration Type Type
 
 
 findTypes : List Statement -> List DiscoveredType
@@ -19,10 +24,10 @@ findTypes statements =
                     addAnnotations text types
 
                 TypeDeclaration qualifier defs ->
-                    addTypeDeclaration (TypeDeclaration qualifier defs) types
+                    addTypeDeclaration (UnionDeclaration qualifier defs) types
 
                 TypeAliasDeclaration qualifier def ->
-                    addTypeDeclaration (TypeAliasDeclaration qualifier def) types
+                    addTypeDeclaration (RecordDeclaration qualifier def) types
 
                 _ ->
                     removeAnnotation types
@@ -44,7 +49,7 @@ addAnnotations text types =
                 (addAnnotationsTo emptyType) :: types
 
 
-addTypeDeclaration : Statement -> List DiscoveredType -> List DiscoveredType
+addTypeDeclaration : DiscoveredDeclaration -> List DiscoveredType -> List DiscoveredType
 addTypeDeclaration declaration types =
     let
         first =

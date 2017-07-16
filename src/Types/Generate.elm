@@ -5,7 +5,7 @@ import Functions.Generate exposing (..)
 import Types.Refine exposing (..)
 
 
-generateTypeConverters : List Type -> String
+generateTypeConverters : List BridgeType -> String
 generateTypeConverters types =
     let
         converters t =
@@ -22,7 +22,7 @@ generateTypeConverters types =
         String.join "\n" (List.map converters types)
 
 
-generateRecordConverters : String -> List ( String, Type ) -> String
+generateRecordConverters : String -> List ( String, BridgeType ) -> String
 generateRecordConverters name fields =
     format """
         typeConverters.jsToElm{0} = {1}
@@ -31,7 +31,7 @@ generateRecordConverters name fields =
         [ name, jsToElmRecordConverter fields, elmToJsRecordConverter fields ]
 
 
-jsToElmRecordConverter : List ( String, Type ) -> String
+jsToElmRecordConverter : List ( String, BridgeType ) -> String
 jsToElmRecordConverter fields =
     let
         fieldConverter ( name, t ) =
@@ -50,7 +50,7 @@ jsToElmRecordConverter fields =
             [ body ]
 
 
-elmToJsRecordConverter : List ( String, Type ) -> String
+elmToJsRecordConverter : List ( String, BridgeType ) -> String
 elmToJsRecordConverter fields =
     let
         fieldConverter ( name, t ) =

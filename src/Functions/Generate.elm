@@ -72,7 +72,7 @@ wrapOutput fn =
                 [ fn.name, jsToElmValue "result" ok, jsToElmValue "err" err ]
 
 
-elmToJsValue : String -> Type -> String
+elmToJsValue : String -> BridgeType -> String
 elmToJsValue varName t =
     case t of
         ListType t ->
@@ -101,7 +101,7 @@ elmToJsValue varName t =
             varName
 
 
-jsToElmValue : String -> Type -> String
+jsToElmValue : String -> BridgeType -> String
 jsToElmValue varName t =
     case t of
         ListType t ->
@@ -132,11 +132,11 @@ jsToElmValue varName t =
             varName
 
 
-arrayToElmValues : String -> Type -> String
+arrayToElmValues : String -> BridgeType -> String
 arrayToElmValues varName contentType =
     varName ++ ".map(value => " ++ (jsToElmValue "value" contentType) ++ ")"
 
 
-listValuesToJs : Type -> String
+listValuesToJs : BridgeType -> String
 listValuesToJs contentType =
     ".map(value => " ++ (elmToJsValue "value" contentType) ++ ")"

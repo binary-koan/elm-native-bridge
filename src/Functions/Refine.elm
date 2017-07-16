@@ -2,25 +2,26 @@ module Functions.Refine exposing (..)
 
 import Ast.Statement exposing (..)
 import Ast.Expression exposing (..)
+import Utils.Result exposing (..)
 import Functions.Discover exposing (..)
-import Types.Refine as T
+import Types.Refine exposing (..)
 
 
 type alias Function =
     { name : String
-    , params : List T.Type
+    , params : List BridgeType
     , result : FunctionOutput
     }
 
 
 type FunctionOutput
-    = BasicOutput T.Type
-    | ResultOutput T.Type T.Type
-    | TaskOutput T.Type T.Type
+    = BasicOutput BridgeType
+    | ResultOutput BridgeType BridgeType
+    | TaskOutput BridgeType BridgeType
 
 
 type alias PartialTypeDef =
-    Result String ( List T.Type, Maybe FunctionOutput )
+    Result String ( List BridgeType, Maybe FunctionOutput )
 
 
 refineFunctions : String -> List DiscoveredFunction -> Result String (List Function)
@@ -30,7 +31,7 @@ refineFunctions moduleName fns =
             List.map (refineFunction moduleName) fns
 
         errors =
-            List.filterMap error functions
+            List.filterMap errToMaybe functions
 
         successes =
             List.filterMap Result.toMaybe functions
@@ -150,41 +151,3 @@ parseResult t =
 
         t_ ->
             Result.map BasicOutput (parseType t_)
-
-
-parseType : Type -> Result String T.Type
-parseType t =
-    case t of
-        TypeConstructor [ "Bool" ] [] ->
-            Ok T.BasicType
-
-        TypeConstructor [ "Int" ] [] ->
-            Ok T.BasicType
-
-        TypeConstructor [ "Float" ] [] ->
-            Ok T.BasicType
-
-        TypeConstructor [ "String" ] [] ->
-            Ok T.BasicType
-
-        TypeConstructor [ "Maybe" ] [ t1 ] ->
-            Result.map T.MaybeType (parseType t1)
-
-        TypeConstructor [ "List" ] [ t1 ] ->
-            Result.map T.ListType (parseType t1)
-
-        TypeConstructor [ "Dict" ] [ TypeConstructor [ "String" ] [], t1 ] ->
-            Result.map T.DictType (parseType t1)
-
-        _ ->
-            Err ("Unknown type definition: " ++ toString t)
-
-
-error : Result String Function -> Maybe String
-error result =
-    case result of
-        Err err ->
-            Just err
-
-        Ok _ ->
-            Nothing
