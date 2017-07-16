@@ -43,7 +43,7 @@ jsToElmRecordConverter fields =
         format """
             original => {
                 var elmValue = Object.assign({}, original)
-                {1}
+                {0}
                 return elmValue
             }
             """
@@ -62,7 +62,7 @@ elmToJsRecordConverter fields =
         format """
             original => {
                 var jsValue = Object.assign({}, original)
-                {1}
+                {0}
                 return jsValue
             }
             """ [ body ]
