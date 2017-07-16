@@ -7,7 +7,8 @@ import Types.Discover exposing (..)
 
 
 type BridgeType
-    = BasicType
+    = UnitType
+    | BasicType
     | MaybeType BridgeType
     | ListType BridgeType
     | DictType BridgeType
@@ -40,6 +41,9 @@ refineTypes discovered =
 parseType : List BridgeType -> Type -> Result String BridgeType
 parseType existing t =
     case t of
+        TypeTuple [] ->
+            Ok UnitType
+
         TypeConstructor [ "Bool" ] [] ->
             Ok BasicType
 

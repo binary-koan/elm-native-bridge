@@ -51,6 +51,9 @@ jsToElmValue varName t =
         BasicType ->
             varName
 
+        UnitType ->
+            "{ ctor: '_Tuple0' }"
+
 
 arrayToElmValues : String -> BridgeType -> String
 arrayToElmValues varName contentType =
@@ -84,6 +87,9 @@ elmToJsValue varName t =
 
         BasicType ->
             varName
+
+        UnitType ->
+            "null"
 
 
 listValuesToJs : BridgeType -> String

@@ -62,9 +62,9 @@ wrapOutput fn =
                 return _elm_lang$core$Native_Scheduler.nativeBinding(callback => {
                     {0}(...args, function(err, result) {
                         if (!err) {
-                            return {1}
+                            callback({1})
                         } else {
-                            return {2}
+                            callback({2})
                         }
                     })
                 })
