@@ -233,10 +233,15 @@ generateModule : String -> List Statement -> Result String String
 generateModule moduleName statements =
     let
         functions =
-            findFunctions statements |> refineFunctions moduleName |> Result.map generateFunctions
+            Result.andThen
+                (\types -> findFunctions statements |> refineFunctions types moduleName |> Result.map generateFunctions)
+                bridgeTypes
+
+        bridgeTypes =
+            findTypes statements |> refineTypes
 
         types =
-            findTypes statements |> refineTypes |> Result.map generateTypeConverters
+            bridgeTypes |> Result.map generateTypeConverters
 
         output fns ts =
             format """

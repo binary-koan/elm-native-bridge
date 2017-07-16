@@ -24,11 +24,11 @@ type alias PartialTypeDef =
     Result String ( List BridgeType, Maybe FunctionOutput )
 
 
-refineFunctions : String -> List DiscoveredFunction -> Result String (List Function)
-refineFunctions moduleName fns =
+refineFunctions : List BridgeType -> String -> List DiscoveredFunction -> Result String (List Function)
+refineFunctions types moduleName fns =
     let
         functions =
-            List.map (refineFunction moduleName) fns
+            List.map (refineFunction types moduleName) fns
 
         errors =
             List.filterMap errToMaybe functions
@@ -42,14 +42,14 @@ refineFunctions moduleName fns =
             Ok successes
 
 
-refineFunction : String -> DiscoveredFunction -> Result String Function
-refineFunction moduleName fn =
+refineFunction : List BridgeType -> String -> DiscoveredFunction -> Result String Function
+refineFunction types moduleName fn =
     let
         nativeName =
             validNativeFunctionName moduleName fn.params fn.body
 
         definition =
-            refineTypeDefinition fn.functionType (Ok ( [], Nothing ))
+            refineTypeDefinition types fn.functionType (Ok ( [], Nothing ))
 
         buildFunction params output =
             Result.map (\name -> { name = name, params = params, result = output }) nativeName
@@ -120,34 +120,34 @@ validNativeFunctionName moduleName params body =
             |> Result.map2 (\name _ -> name) (nativeFunctionName body)
 
 
-refineTypeDefinition : Type -> PartialTypeDef -> PartialTypeDef
-refineTypeDefinition t result =
+refineTypeDefinition : List BridgeType -> Type -> PartialTypeDef -> PartialTypeDef
+refineTypeDefinition types t result =
     case t of
         TypeApplication t next ->
-            refineTypeDefinition next (addParamType t result)
-
-        t1 ->
-            addReturnType t1 result
-
-
-addParamType : Type -> PartialTypeDef -> PartialTypeDef
-addParamType def result =
-    Result.map2 (\t ( params, output ) -> ( params ++ [ t ], output )) (parseType def) result
-
-
-addReturnType : Type -> PartialTypeDef -> PartialTypeDef
-addReturnType t result =
-    Result.map2 (\t ( params, _ ) -> ( params, Just t )) (parseResult t) result
-
-
-parseResult : Type -> Result String FunctionOutput
-parseResult t =
-    case t of
-        TypeConstructor [ "Result" ] [ t1, t2 ] ->
-            Result.map2 ResultOutput (parseType t1) (parseType t2)
-
-        TypeConstructor [ "Task" ] [ t1, t2 ] ->
-            Result.map2 TaskOutput (parseType t1) (parseType t2)
+            refineTypeDefinition types next (addParamType types t result)
 
         t_ ->
-            Result.map BasicOutput (parseType t_)
+            addReturnType types t_ result
+
+
+addParamType : List BridgeType -> Type -> PartialTypeDef -> PartialTypeDef
+addParamType types def result =
+    Result.map2 (\t ( params, output ) -> ( params ++ [ t ], output )) (parseType types def) result
+
+
+addReturnType : List BridgeType -> Type -> PartialTypeDef -> PartialTypeDef
+addReturnType types t result =
+    Result.map2 (\t ( params, _ ) -> ( params, Just t )) (parseResult types t) result
+
+
+parseResult : List BridgeType -> Type -> Result String FunctionOutput
+parseResult types t =
+    case t of
+        TypeConstructor [ "Result" ] [ t1, t2 ] ->
+            Result.map2 ResultOutput (parseType types t1) (parseType types t2)
+
+        TypeConstructor [ "Task" ] [ t1, t2 ] ->
+            Result.map2 TaskOutput (parseType types t1) (parseType types t2)
+
+        t_ ->
+            Result.map BasicOutput (parseType types t_)

@@ -25,11 +25,20 @@ type alias UnionOptions =
 
 refineTypes : List DiscoveredType -> Result String (List BridgeType)
 refineTypes discovered =
-    Ok <| List.filterMap (refineType >> Result.toMaybe) discovered
+    let
+        addRefinedType t existing =
+            case refineType existing t of
+                Ok bridgeType ->
+                    bridgeType :: existing
+
+                Err _ ->
+                    existing
+    in
+        Ok <| List.foldr addRefinedType [] discovered
 
 
-parseType : Type -> Result String BridgeType
-parseType t =
+parseType : List BridgeType -> Type -> Result String BridgeType
+parseType existing t =
     case t of
         TypeConstructor [ "Bool" ] [] ->
             Ok BasicType
@@ -44,26 +53,54 @@ parseType t =
             Ok BasicType
 
         TypeConstructor [ "Maybe" ] [ t1 ] ->
-            Result.map MaybeType (parseType t1)
+            Result.map MaybeType (parseType existing t1)
 
         TypeConstructor [ "List" ] [ t1 ] ->
-            Result.map ListType (parseType t1)
+            Result.map ListType (parseType existing t1)
 
         TypeConstructor [ "Dict" ] [ TypeConstructor [ "String" ] [], t1 ] ->
-            Result.map DictType (parseType t1)
+            Result.map DictType (parseType existing t1)
+
+        TypeConstructor [ name ] [] ->
+            findTypeReference name existing
 
         _ ->
             Err ("Unknown type definition: " ++ toString t)
 
 
-refineType : DiscoveredType -> Result String BridgeType
-refineType discovered =
+findTypeReference : String -> List BridgeType -> Result String BridgeType
+findTypeReference name existing =
+    let
+        checkName typeName bridgeType =
+            if typeName == name then
+                Just bridgeType
+            else
+                Nothing
+
+        typeRef bridgeType =
+            case bridgeType of
+                UnionType options ->
+                    checkName options.name (UnionType options)
+
+                RecordType name fields ->
+                    checkName name (RecordType name fields)
+
+                _ ->
+                    Nothing
+    in
+        List.filterMap typeRef existing
+            |> List.head
+            |> Result.fromMaybe ("Unknown type name: " ++ name)
+
+
+refineType : List BridgeType -> DiscoveredType -> Result String BridgeType
+refineType existing discovered =
     case discovered.declaration of
         Just (UnionDeclaration qualifier defs) ->
             refineUnion qualifier defs discovered.annotations
 
         Just (RecordDeclaration qualifier def) ->
-            Result.map2 buildRecord (parseName qualifier) (parseRecord def)
+            Result.map2 buildRecord (parseName qualifier) (parseRecord existing def)
 
         Nothing ->
             Err ("Incomplete type sneaked through (this should never happen): " ++ toString discovered)
@@ -184,11 +221,11 @@ findUnionDefaults annotations options =
             |> Result.fromMaybe "A default enum value must be specified, and must correspond to a type constructor"
 
 
-parseRecord : Type -> Result String (List ( String, BridgeType ))
-parseRecord t =
+parseRecord : List BridgeType -> Type -> Result String (List ( String, BridgeType ))
+parseRecord existing t =
     let
         parseField ( name, t ) =
-            Result.map (\bridgeType -> ( name, bridgeType )) (parseType t)
+            Result.map (\bridgeType -> ( name, bridgeType )) (parseType existing t)
     in
         case t of
             TypeRecord fields ->
