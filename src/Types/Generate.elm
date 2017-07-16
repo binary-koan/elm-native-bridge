@@ -146,8 +146,8 @@ elmToJsRecordConverter fields =
 generateUnionConverters : UnionOptions -> String
 generateUnionConverters union =
     format """
-        typeConverters.jsToElm{0} = value => {1}
-        typeConverters.elmToJs{0} = value => {2}
+        typeConverters.jsToElm{0} = {1}
+        typeConverters.elmToJs{0} = {2}
         """
         [ union.name
         , jsToElmUnionConverter union.values union.defaultCtor
